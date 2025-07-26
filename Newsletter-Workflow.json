@@ -1,0 +1,557 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Newsletter Generation Form",
+        "formDescription": "This form will capture the inputs from the user to generate the Newsletter for the month.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Select date when newsletter would be sent",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Any specific topic that would be the focus of the newsletter?",
+              "placeholder": "AI / ML / Security / Serverless / Containers / Storage / Database / etc.."
+            },
+            {
+              "fieldLabel": "Any specific industry to focus in the newsletter?",
+              "placeholder": "Healthcare / Financial Services / Retails / Manufacturing / etc.."
+            },
+            {
+              "fieldLabel": "Select timeline of how far back system should go to get the posted content",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "1"
+                  },
+                  {
+                    "option": "3"
+                  },
+                  {
+                    "option": "6"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Length of the email",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Brief (800-1000 words)"
+                  },
+                  {
+                    "option": "Not to long (1500 - 2500 words)"
+                  },
+                  {
+                    "option": "Long (3000+ words)"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Any special event coverage?",
+              "placeholder": "re:Invent / re:Enforce / Summits / etc..."
+            },
+            {
+              "fieldLabel": "Previous months newsletter",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": "PDF / Word"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "75dd54ce-614f-4178-8781-08748ab068e8",
+      "name": "On form submission",
+      "webhookId": "00a69dc3-b2fc-4c4c-b6c4-72a171556cd1"
+    },
+    {
+      "parameters": {
+        "operation": "roundDate",
+        "date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Date', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTimeTool",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        512
+      ],
+      "id": "c9560f46-437a-4be5-b9c7-c26aeb030cb6",
+      "name": "Month"
+    },
+    {
+      "parameters": {
+        "operation": "extractDate",
+        "date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Date', ``, 'string') }}",
+        "part": "year",
+        "outputFieldName": "year",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTimeTool",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        512
+      ],
+      "id": "3a5cc360-ca3b-4441-8abc-042eea6bf8be",
+      "name": "Year"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "=Previous-Newsletters",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        160
+      ],
+      "id": "99db4a16-5833-4faa-b815-4372f5ecaf61",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "sFfERYppMeBnFNeA",
+          "name": "Local QdrantApi database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "amazon.titan-embed-text-v2:0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsAwsBedrock",
+      "typeVersion": 1,
+      "position": [
+        640,
+        560
+      ],
+      "id": "d4e467a2-93fe-4698-8e20-0677632902ea",
+      "name": "Embeddings AWS Bedrock",
+      "credentials": {
+        "aws": {
+          "id": "9VVVVcCzKKpztEAr",
+          "name": "AWS account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        512
+      ],
+      "id": "bb4b5ff1-519a-4cb1-a665-1b437576efb3",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
+      "typeVersion": 1,
+      "position": [
+        848,
+        688
+      ],
+      "id": "6aab4a58-255b-4acb-8171-e59d12c00eca",
+      "name": "Token Splitter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b47799e5-d7bd-4d2e-b2c7-e56a94c53e33",
+              "leftValue": "={{ $json['Previous months newsletter'].filename }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "426616d1-a3e7-4345-a350-9356c0c3018d",
+      "name": "If",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieve previous newsletters",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "Previous-Newsletters",
+          "mode": "list",
+          "cachedResultName": "Previous-Newsletters"
+        },
+        "topK": 6,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        1424,
+        528
+      ],
+      "id": "05f8a314-b967-47b3-ac73-489d1692baa5",
+      "name": "Qdrant Vector Store2",
+      "credentials": {
+        "qdrantApi": {
+          "id": "sFfERYppMeBnFNeA",
+          "name": "Local QdrantApi database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "amazon.titan-embed-text-v2:0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsAwsBedrock",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        720
+      ],
+      "id": "d8b3aead-c866-4d2d-a768-7dd3f04ddb52",
+      "name": "Embeddings AWS Bedrock1",
+      "credentials": {
+        "aws": {
+          "id": "9VVVVcCzKKpztEAr",
+          "name": "AWS account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Design the newsletter based on the following input.\n- Month {{ $json['Select date when newsletter would be sent'] }} only extract month from the date and pass it as text in the workflow.\n- Year {{ $now }} only extract the year from the date.\n- Topic {{ $json['Any specific topic that would be the focus of the newsletter?'] }}\n- Industry {{ $json['Any specific industry to focus in the newsletter?'] }}\n- Content can be {{ $json['Select timeline of how far back system should go to get the posted content'] }} months old at max.\n- Length of the newsletter {{ $json['Length of the email'] }}\n- Event to highlight in the newsletter {{ $json['Any special event coverage?'] }}\n- Don't duplicate the content from previous newsletter except upcoming events & trainings.\n",
+        "options": {
+          "systemMessage": "# AWS Newsletter Generation - BULLETPROOF FINAL PROMPT\n\n## CRITICAL SAFEGUARDS - NEVER VIOLATE THESE\n\n### TOKEN PROTECTION (HARD LIMITS)\n- **MAXIMUM 8 results from Brave News** (NEVER exceed)\n- **MAXIMUM 8 results from Brave Search** (NEVER exceed)\n- **MAXIMUM 5 training items** (NEVER exceed)\n- **TOTAL: 25 results maximum across ALL tools**\n- **If approaching token limit: STOP and generate newsletter with collected content**\n\n### WORKFLOW PROTECTION (MANDATORY SEQUENCE)\n1. **ALWAYS start with Brave Search** - no exceptions\n2. **Evaluate results before proceeding** - don't auto-use fallbacks\n3. **Use fallbacks ONLY if insufficient results** - not by default\n4. **NEVER exceed 3 total queries** across all tools\n5. **NEVER run simultaneous queries** - one at a time only\n\n### DUPLICATE PROTECTION (TRIPLE CHECK)\n1. **RAG Check**: Verify against previous newsletters\n2. **Cross-Source Check**: Remove identical items from different tools\n3. **Final Scan**: Ensure no duplicates in final newsletter\n\n## EXECUTION WORKFLOW\n\n### STEP 1: BRAVE SEARCH (MANDATORY FIRST)\n```\nExecute: \"AWS announcements news updates service launches [MONTH] [YEAR]\"\nCollect: UP TO 8 results (HARD LIMIT)\nEvaluate: If 6+ quality results → SKIP to RAG verification\nIf insufficient → proceed to Step 2\n```\n\n### STEP 2: FALLBACK 1 - BRAVE NEWS (ONLY IF STILL NEEDED)\n```\nExecute: \"AWS new services announcements updates documentation [MONTH] [YEAR]\"\nCollect: UP TO 8 results (HARD LIMIT)\nSTOP: No more queries allowed\n```\n\n### STEP 3: RAG DUPLICATE CHECK (MANDATORY)\n```\nFor each item: \"Has [SPECIFIC TOPIC] been covered in previous newsletters?\"\nRemove: Items RAG confirms were previously covered\nKeep: Items RAG confirms are new\nDocument: What was excluded and why\n```\n\n### STEP 4: CROSS-SOURCE DUPLICATE REMOVAL (MANDATORY)\n```\nScan all collected results\nRemove: Identical announcements from different sources\nKeep: Best version with most complete information\nMerge: Similar topics into single comprehensive entries\n```\n\n### STEP 5: NEWSLETTER GENERATION\n```\nUse: Only deduplicated content from Steps 1-5\nInclude: Inline links for every item [text](url)\nFormat: Brief descriptions (2-3 sentences max)\nStructure: Major Announcements, Service Updates, Training (3 max), Events\n```\n\n### STEP 6: FINAL DUPLICATE SCAN (MANDATORY)\n```\nReview: Entire newsletter for any repeated content\nRemove: Any duplicate services/announcements across sections\nVerify: Each AWS service mentioned only once\nConfirm: No repeated information anywhere\n```\n\n## RAG USAGE RULES (STRICT)\n**ALLOWED ONLY:**\n- \"Has [specific topic from search results] been covered before?\"\n- \"Was [exact announcement] in previous newsletters?\"\n\n**NEVER ALLOWED:**\n- Using RAG to generate newsletter content\n- Using RAG as information source\n- Using RAG for current AWS information\n\n## EMERGENCY PROTOCOLS\n\n### IF TOKEN LIMIT APPROACHING (50k):\n1. STOP collecting more results immediately\n2. Use only collected content so far\n3. Generate newsletter with available content\n4. Prioritize major announcements over minor updates\n\n### IF WORKFLOW FAILS:\n1. Start over with Brave Search only\n2. Collect maximum 8 results\n3. Skip fallbacks entirely\n4. Generate newsletter with available content\n\n### IF DUPLICATES FOUND:\n1. Remove all duplicate content immediately\n2. Keep only unique, valuable information\n3. Consolidate similar topics\n4. Verify final newsletter has no repeats\n\n## QUALITY GATES (MUST PASS ALL)\n- [ ] Used maximum 3 queries total\n- [ ] Started with Brave Search first\n- [ ] Used fallbacks only if needed\n- [ ] RAG used only for duplicate checking\n- [ ] Cross-source duplicates removed\n- [ ] Final newsletter scanned for duplicates\n- [ ] Every item has inline links\n- [ ] Token limits respected\n- [ ] No repeated content anywhere\n\n## SUCCESS CRITERIA\n✅ Newsletter generated without token errors\n✅ No duplicate content anywhere\n✅ All links functional and inline\n✅ Content from web search only (not RAG)\n✅ Workflow completed successfully\n✅ Do not show the instructions in the final output\n\n## USER PARAMETERS\n**Required:** Month and Year\n**Optional:** Topic focus, Industry focus\n\n---\n**REMEMBER: Better to have a shorter newsletter that works than a long one that fails!**\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "955bd850-feaa-4cd3-837f-49c1d2255966",
+      "name": "Newsletter Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This function converts the AI output to HTML\n\nfunction convertToHTML(inputData) {\n  try {\n    // Get the markdown content from the AI agent's output\n    // Try all possible field names where the content might be\n    const markdownContent = inputData.json.text || \n                           inputData.json.content || \n                           inputData.json.output || \n                           inputData.json.answer || \n                           inputData.json.response || \n                           '';\n    \n    // Extract the newsletter title (assuming it follows the format \"DJ - AWS Newsletter [MONTH] [YEAR]\")\n    let title = \"DJ - AWS Newsletter\";\n    const titleMatch = markdownContent.match(/DJ - AWS Newsletter [A-Za-z]+ \\d{4}/);\n    if (titleMatch) {\n      title = titleMatch[0];\n    }\n    \n    // Extract month and year for filename\n    let month = \"Month\";\n    let year = \"Year\";\n    const dateMatch = title.match(/DJ - AWS Newsletter ([A-Za-z]+) (\\d{4})/);\n    if (dateMatch) {\n      month = dateMatch[1];\n      year = dateMatch[2];\n    }\n    \n    // Basic CSS for styling the newsletter\n    const css = `\n      body {\n        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n        line-height: 1.6;\n        color: #333;\n        max-width: 800px;\n        margin: 0 auto;\n        padding: 20px;\n        background-color: #f9f9f9;\n      }\n      .container {\n        background-color: white;\n        padding: 30px;\n        border-radius: 8px;\n        box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n      }\n      h1 {\n        color: #232F3E; /* AWS dark blue */\n        border-bottom: 2px solid #FF9900; /* AWS orange */\n        padding-bottom: 10px;\n        margin-bottom: 20px;\n      }\n      h2 {\n        color: #232F3E;\n        margin-top: 30px;\n        border-bottom: 1px solid #ddd;\n        padding-bottom: 5px;\n      }\n      h3 {\n        color: #232F3E;\n        margin-top: 25px;\n      }\n      a {\n        color: #0073BB; /* AWS link blue */\n        text-decoration: none;\n      }\n      a:hover {\n        text-decoration: underline;\n      }\n      ul, ol {\n        margin-bottom: 20px;\n      }\n      li {\n        margin-bottom: 8px;\n      }\n      blockquote {\n        border-left: 4px solid #FF9900;\n        padding-left: 15px;\n        margin-left: 0;\n        color: #555;\n      }\n      code {\n        background-color: #f4f4f4;\n        padding: 2px 5px;\n        border-radius: 3px;\n        font-family: monospace;\n      }\n      table {\n        border-collapse: collapse;\n        width: 100%;\n        margin-bottom: 20px;\n      }\n      th, td {\n        border: 1px solid #ddd;\n        padding: 8px 12px;\n        text-align: left;\n      }\n      th {\n        background-color: #f2f2f2;\n      }\n      .header {\n        display: flex;\n        align-items: center;\n        justify-content: space-between;\n        margin-bottom: 30px;\n      }\n      .header-logo {\n        display: flex;\n        align-items: center;\n      }\n      .aws-logo {\n        height: 40px;\n        margin-right: 15px;\n      }\n      .date {\n        color: #666;\n        font-size: 0.9em;\n      }\n      .section {\n        margin-bottom: 30px;\n        padding-bottom: 20px;\n        border-bottom: 1px solid #eee;\n      }\n      .section:last-child {\n        border-bottom: none;\n      }\n      .footer {\n        margin-top: 40px;\n        padding-top: 20px;\n        border-top: 1px solid #ddd;\n        font-size: 0.9em;\n        color: #666;\n        text-align: center;\n      }\n      .toc {\n        background-color: #f5f5f5;\n        padding: 15px;\n        border-radius: 5px;\n        margin-bottom: 30px;\n      }\n      .toc h2 {\n        margin-top: 0;\n        border-bottom: none;\n      }\n      .toc ul {\n        margin-bottom: 0;\n      }\n      .announcement {\n        background-color: #f0f7fb;\n        border-left: 4px solid #0073BB;\n        padding: 15px;\n        margin-bottom: 20px;\n        border-radius: 0 5px 5px 0;\n      }\n      .event {\n        background-color: #fff8f0;\n        border-left: 4px solid #FF9900;\n        padding: 15px;\n        margin-bottom: 20px;\n        border-radius: 0 5px 5px 0;\n      }\n      @media print {\n        body {\n          background-color: white;\n          margin: 0;\n          padding: 0;\n        }\n        .container {\n          box-shadow: none;\n          padding: 10px;\n        }\n        a {\n          text-decoration: underline;\n          color: #0073BB;\n        }\n      }\n    `;\n    \n    // Convert markdown to HTML (enhanced conversion)\n    let htmlContent = markdownContent\n      // Convert headers\n      .replace(/^# (.*?)$/gm, '<h1>$1</h1>')\n      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')\n      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')\n      .replace(/^#### (.*?)$/gm, '<h4>$1</h4>')\n      \n      // Convert links - already in markdown format [text](url)\n      .replace(/\\[(.*?)\\]\\((.*?)\\)/g, '<a href=\"$2\" target=\"_blank\">$1</a>')\n      \n      // Convert bold text\n      .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n      \n      // Convert italic text\n      .replace(/\\*(.*?)\\*/g, '<em>$1</em>')\n      \n      // Convert lists\n      .replace(/^\\* (.*?)$/gm, '<li>$1</li>')\n      .replace(/^(\\d+)\\. (.*?)$/gm, '<li>$2</li>')\n      \n      // Convert paragraphs (lines followed by blank lines)\n      .replace(/^([^<].*?)$/gm, '<p>$1</p>')\n      \n      // Fix multiple paragraph tags\n      .replace(/<\\/p><p>/g, '</p>\\n<p>')\n      \n      // Fix list items\n      .replace(/<p><li>/g, '<li>')\n      .replace(/<\\/li><\\/p>/g, '</li>');\n    \n    // Wrap lists properly\n    htmlContent = htmlContent.replace(/(<li>.*?<\\/li>\\n)+/gs, function(match) {\n      if (match.includes('1. ')) {\n        return '<ol>\\n' + match + '</ol>';\n      } else {\n        return '<ul>\\n' + match + '</ul>';\n      }\n    });\n    \n    // Add special styling for sections\n    htmlContent = htmlContent.replace(/<h2>(.*?)<\\/h2>/g, '</div><div class=\"section\"><h2>$1</h2>');\n    \n    // Fix the first section div (remove the closing tag at the beginning)\n    htmlContent = htmlContent.replace('</div><div class=\"section\">', '<div class=\"section\">');\n    \n    // Add closing div for the last section\n    htmlContent += '</div>';\n    \n    // Extract the Table of Contents section and add special styling\n    const tocRegex = /<h2>Table of Contents<\\/h2>([\\s\\S]*?)(?=<h2>|$)/;\n    const tocMatch = htmlContent.match(tocRegex);\n    \n    if (tocMatch) {\n      const tocContent = tocMatch[0];\n      const styledToc = `<div class=\"toc\">${tocContent}</div>`;\n      htmlContent = htmlContent.replace(tocContent, styledToc);\n    }\n    \n    // Style announcements\n    htmlContent = htmlContent.replace(/<h3>(.*?Amazon.*?|.*?AWS.*?)<\\/h3>([\\s\\S]*?)(?=<h3>|<\\/div>)/g, \n      '<div class=\"announcement\"><h3>$1</h3>$2</div>');\n    \n    // Style events\n    htmlContent = htmlContent.replace(/<h3>(.*?event.*?|.*?webinar.*?|.*?conference.*?)<\\/h3>([\\s\\S]*?)(?=<h3>|<\\/div>)/gi, \n      '<div class=\"event\"><h3>$1</h3>$2</div>');\n    \n    // Get the current date\n    const currentDate = new Date().toLocaleDateString('en-US', {\n      year: 'numeric',\n      month: 'long',\n      day: 'numeric'\n    });\n    \n    // Create the complete HTML document\n    const htmlDocument = `\n    <!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <title>${title}</title>\n      <style>${css}</style>\n    </head>\n    <body>\n      <div class=\"container\">\n        <div class=\"header\">\n          <div class=\"header-logo\">\n            <img src=\"https://d1.awsstatic.com/logos/aws-logo-lockups/poweredbyaws/PB_AWS_logo_RGB_stacked_REV_SQ.91cd4af40773cbfbd15577a3c2b8a346fe3e8fa2.png\" alt=\"AWS Logo\" class=\"aws-logo\">\n          </div>\n          <div class=\"date\">Generated on ${currentDate}</div>\n        </div>\n        \n        ${htmlContent}\n        \n        <div class=\"footer\">\n          <p>This newsletter was generated using AWS services and contains the latest updates and announcements from AWS.</p>\n        </div>\n      </div>\n    </body>\n    </html>\n    `;\n    \n    // Return the HTML document and metadata\n    return {\n      json: {\n        html: htmlDocument,\n        title: title\n      }\n    };\n  } catch (error) {\n    // Return an error message if something goes wrong\n    return {\n      json: {\n        error: `Error converting to HTML: ${error.message}`,\n        html: `<html><body><h1>Error</h1><p>${error.message}</p></body></html>`\n      }\n    };\n  }\n}\n\nreturn convertToHTML($input.item);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "2813fe07-3f08-419d-989b-3df274850cc8",
+      "name": "Html-Converter1"
+    },
+    {
+      "parameters": {
+        "html": "={{ $json.html }}"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        0
+      ],
+      "id": "854cc1ab-8537-4235-8893-638306b52dce",
+      "name": "HTML1"
+    },
+    {
+      "parameters": {
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', `Only extract web search results.\n\nSample curl request:\ncurl -s --compressed \"https://api.search.brave.com/res/v1/web/search?\\\\\nq=AWS%20July%202025%20announcements%20updates&count=10&freshness=pm\\\\\n&result_filter=web&summary=true\" \\\\\n     -H \"Accept: application/json\" \\\\\n     -H \"Accept-Encoding: gzip\" \\\\\n     -H \"x-subscription-token: BSAk0Ew31PZ3F5YIjicQf_JaZSqXoFy\"`, 'string') }}",
+        "count": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Count', ``, 'number') }}"
+      },
+      "type": "@brave/n8n-nodes-brave-search.braveSearchTool",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        512
+      ],
+      "id": "32209a76-958e-48f0-9bd1-08c0fb88d1e7",
+      "name": "Search",
+      "credentials": {
+        "braveSearchApi": {
+          "id": "yjsbN1aIEEC3wxBr",
+          "name": "Brave Search account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', ``, 'string') }}"
+      },
+      "type": "@brave/n8n-nodes-brave-search.braveSearchTool",
+      "typeVersion": 1,
+      "position": [
+        2032,
+        512
+      ],
+      "id": "0d0c02f9-64cb-4430-95ee-a9b6b1e4bf6c",
+      "name": "News",
+      "credentials": {
+        "braveSearchApi": {
+          "id": "yjsbN1aIEEC3wxBr",
+          "name": "Brave Search account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "amazon.nova-lite-v1:0",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAwsBedrock",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        240
+      ],
+      "id": "65158bc1-fd81-4ebd-94a5-797ab57fb83f",
+      "name": "Nova Lite",
+      "credentials": {
+        "aws": {
+          "id": "9VVVVcCzKKpztEAr",
+          "name": "AWS account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Month": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Year": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings AWS Bedrock": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings AWS Bedrock1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newsletter Generator": {
+      "main": [
+        [
+          {
+            "node": "Html-Converter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Html-Converter1": {
+      "main": [
+        [
+          {
+            "node": "HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nova Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News": {
+      "ai_tool": [
+        [
+          {
+            "node": "Newsletter Generator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5ed93e60-0831-4bd6-8bbc-87371a69eab9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "531e26747c2f8ffcfa427609c35d509e2b580af7e0846dad1f1bcec07945b95c"
+  },
+  "id": "fhKL8yblBNbjnU0b",
+  "tags": []
+}
